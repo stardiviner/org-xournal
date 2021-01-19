@@ -124,16 +124,11 @@ Should located in `org-xournal-template-dir'"
 ;;;; Commands
 
 (defun org-xournal--new-xournal-file-in-default-dir ()
-  (let (
-        (file-name (read-minibuffer "New Xournal file: "
+  (let ((file-name (read-minibuffer "New Xournal file: "
                                     (format "%s_%s"
                                             (format-time-string "%Y%m%d_%H%M%S")
-                                            (org-xournal-org-heading-escape (org-entry-get nil "ITEM")))))
-        )
-    (funcall org-xournal-path-format-function file-name)
-    )
-  )
-
+                                            (org-xournal-org-heading-escape (org-entry-get nil "ITEM"))))))
+    (funcall org-xournal-path-format-function file-name)))
 
 (defun org-xournal-org-heading-escape (heading)
   (setq heading (replace-regexp-in-string "\\[.*\\]" "" heading))
@@ -145,8 +140,7 @@ Should located in `org-xournal-template-dir'"
   (setq heading(replace-regexp-in-string "[öÓ]+" "o" heading))
   ;; whitespace and . to underscores
   (setq heading (replace-regexp-in-string "[ .]+" "_" heading))
-  heading
-  )
+  heading)
 
 (defun org-xournal-path-format-function-default (file-name)
   "The default function of `org-xournal-path-format-function'.
@@ -155,15 +149,12 @@ Get the xournal note file link path by file-name."
                                          org-xournal-note-dir)))
     (if org-xournal-use-relative-filename
         (org-link-escape (file-relative-name absolute-path))
-      (org-link-escape absolute-path))
-    )
-  )
+      (org-link-escape absolute-path))))
 
 (defun org-xournal-process-picture-functon-default (png-path)
   "Process the image png-path after conversion."
-  (call-process-shell-command (format "convert %s -trim -bordercolor '#FFFFFF' -border 25 +repage %s" png-path png-path))
-  )
-
+  (call-process-shell-command
+   (format "convert %s -trim -bordercolor '#FFFFFF' -border 25 +repage %s" png-path png-path)))
 
 (defun org-xournal-get-links ()
   "Get all xournal link in buffer"
@@ -172,11 +163,9 @@ Get the xournal note file link path by file-name."
       (when (string-equal (org-element-property :type link) org-xournal-link-prefix)
         link))))
 
-
 (defun org-xournal-save-image (xournal-path png-path)
   "Convert XOURNAL-PATH to PNG and write it to PNG-PATH."
-  (call-process-shell-command (format "%s %s -i %s" org-xournal-bin xournal-path png-path))
-  )
+  (call-process-shell-command (format "%s %s -i %s" org-xournal-bin xournal-path png-path)))
 
 (defun org-xournal-get-png (xournal-path)
   "Get png image data from given XOURNAL-PATH."
@@ -187,20 +176,16 @@ Get the xournal note file link path by file-name."
       (org-xournal-save-image xournal-path png-path)
       (if org-xournal-process-picture-after-convert (funcall org-xournal-process-picture-functon png-path))
       (insert-file-contents-literally png-path)
-      (buffer-string))
-    )
-  )
+      (buffer-string))))
 
 (defun org-xournal-make-new-image (output-xournal-path &optional default)
   "Create a new Xournal file based on a template at OUTPUT-XOURNAL-PATH."
   (let ((template
          (if org-xournal-always-use-default-template
              (expand-file-name org-xournal-default-template-name org-xournal-template-dir)
-           (read-file-name "Chose Template:"  org-xournal-template-dir org-xournal-default-template-name t)
-           )
-         ))
+           (read-file-name "Chose Template:"
+                           org-xournal-template-dir org-xournal-default-template-name t))))
     (f-copy template output-xournal-path)))
-
 
 (defun org-xournal-show-link (link)
   (org-xournal-hide-link link)
@@ -211,18 +196,13 @@ Get the xournal note file link path by file-name."
     (overlay-put overlay 'display (create-image (org-xournal-get-png xournal-path) 'png t :scale 0.4))
     (push (cons xournal-path overlay) org-xournal-overlays)))
 
-
 (defun org-xournal-show-current-link (&optional complete-file link-location description)
   (cl-multiple-value-bind (start end link desc) (org-link-edit--link-data)
-    (let* (
-           (overlay (make-overlay start end))
-           (xournal-path (nth 1 (split-string link ":")))
-           )
-      (overlay-put overlay 'display (create-image (org-xournal-get-png xournal-path) 'png t :scale 0.4))
-      (push (cons xournal-path overlay) org-xournal-overlays)
-      )
-    )
-  )
+    (let* ((overlay (make-overlay start end))
+           (xournal-path (nth 1 (split-string link ":"))))
+      (overlay-put overlay
+                   'display (create-image (org-xournal-get-png xournal-path) 'png t :scale 0.4))
+      (push (cons xournal-path overlay) org-xournal-overlays))))
 
 (defun org-xournal-hide-link (link)
   (let ((overlay (alist-get (org-element-property :path link) org-xournal-overlays nil nil #'string-equal)))
@@ -231,14 +211,6 @@ Get the xournal note file link path by file-name."
 (defun org-xournal-hide-all ()
   (dolist (link (org-xournal-get-links))
     (org-xournal-hide-link link)))
-
-
-(defun org-xournal-disable ()
-  "Disable watchers and hide xournal images."
-  (dolist (watcher org-xournal-watchers)
-    (file-notify-rm-watch (cdr watcher)))
-  (setq org-xournal-watchers nil)
-  (org-xournal-hide-all))
 
 (defun org-xournal-event-file-path (event)
   (if (eq (nth 1 event) 'renamed)
@@ -259,27 +231,16 @@ Get the xournal note file link path by file-name."
     (unless (alist-get xournal-path org-xournal-watchers nil nil #'string-equal)
       (push (cons xournal-path desc) org-xournal-watchers))))
 
-
-(defun org-xournal-enable ()
-  (unless (file-directory-p org-xournal-note-dir)
-    (make-directory org-xournal-note-dir))
-  (dolist (link (org-xournal-get-links))
-    (org-xournal-show-link link)))
-
-
 (defun org-xournal-edit (path)
   "Edit given PATH in xournal."
   (let ((xournal-path (expand-file-name path)))
     (when (f-exists-p xournal-path)
       (cond
        ((eq system-type 'darwin)
-        (call-process-shell-command (format "open -a %s %s" org-xournal-bin xournal-path))
-        )
+        (call-process-shell-command (format "open -a %s %s" org-xournal-bin xournal-path)))
        (t  ;; TODO need feedback from other os
-        (call-process-shell-command (format "%s %s" org-xournal-bin xournal-path))
-        ))
-      (org-xournal-add-watcher xournal-path)
-      )))
+        (call-process-shell-command (format "%s %s" org-xournal-bin xournal-path))))
+      (org-xournal-add-watcher xournal-path))))
 
 (defun org-xournal-export (_path _desc _backend)
   "Export xournal canvas _PATH from Org files.
@@ -295,13 +256,10 @@ Argument _BACKEND refers to export backend."
                      (prog1 png-path
                        (org-xournal-save-image _path png-path)))))))
 
-
-;;;; Functions
-
+;;; Add org-mode link type.
 (org-link-set-parameters org-xournal-link-prefix
                          :follow #'org-xournal-edit
-                         :export #'org-xournal-export
-                         )
+                         :export #'org-xournal-export)
 
 ;;;###autoload
 (defun org-xournal-insert-new-image (output-xournal-path desc)
@@ -312,18 +270,29 @@ Argument _BACKEND refers to export backend."
      (list output-xournal-path desc)))
   (org-xournal-make-new-image output-xournal-path)
   (org-insert-link nil (format "%s:%s" org-xournal-link-prefix output-xournal-path) desc)
-  (org-xournal-show-current-link)
-  )
+  (org-xournal-show-current-link))
 
 ;;;###autoload
 (defun org-xournal-insert-new-image-with-default-template ()
   "Insert new image in current buffer."
   (interactive)
   (let ((org-xournal-always-use-default-template t))
-    (org-xournal-insert-new-image (funcall org-xournal-get-new-filepath) (funcall org-xournal-get-new-desc))
-    )
-  )
+    (org-xournal-insert-new-image
+     (funcall org-xournal-get-new-filepath)
+     (funcall org-xournal-get-new-desc))))
 
+(defun org-xournal-disable ()
+  "Disable watchers and hide xournal images."
+  (dolist (watcher org-xournal-watchers)
+    (file-notify-rm-watch (cdr watcher)))
+  (setq org-xournal-watchers nil)
+  (org-xournal-hide-all))
+
+(defun org-xournal-enable ()
+  (unless (file-directory-p org-xournal-note-dir)
+    (make-directory org-xournal-note-dir))
+  (dolist (link (org-xournal-get-links))
+    (org-xournal-show-link link)))
 
 ;;;###autoload
 (define-minor-mode org-xournal-mode
